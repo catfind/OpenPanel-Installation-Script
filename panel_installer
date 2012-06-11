@@ -131,7 +131,7 @@ done
 
 
 #install additional tools
-echo "Updating packet database..."
+echo "Updating package database..."
 echo >> $logfile
 echo "==> apt-get update" >> $logfile
 if ! apt-get update &>> $logfile
@@ -187,10 +187,20 @@ then
         fi
     fi
     #update package sources
-    echo "Updating sources..."
+    echo "Updating package database..."
     echo >> $logfile
     echo "==> apt-get update" >> $logfile
     if ! apt-get update &>> $logfile
+    then
+        echo "An error has occured. Check $logfile"
+        cleanup
+        exit 1
+    fi
+    #install build dependencies
+    echo "Installing build dependencies..."
+    echo >> $logfile
+    echo "==> apt-get build-dep pure-ftpd" >> $logfile
+    if ! apt-get build-dep pure-ftpd &>> $logfile
     then
         echo "An error has occured. Check $logfile"
         cleanup
@@ -231,11 +241,14 @@ then
     echo "Installing..."
     echo >> ../$logfile
     echo "==> dpkg -i pure-ftpd-common_1.0.24-1_all.deb pure-ftpd_1.0.24-1_amd64.deb" >> ../$logfile
-    if ! dpkg -i pure-ftpd-common_1.0.24-1_all.deb pure-ftpd_1.0.24-1_amd64.deb &>> ../$logfile
+    dpkg -i pure-ftpd-common_1.0.24-1_all.deb pure-ftpd_1.0.24-1_amd64.deb &>> ../$logfile
+    echo >> ../$logfile
+    echo "==> apt-get -fy install" >> ../$logfile
+    if ! apt-get -fy install &>> ../$logfile
     then
         echo "An error has occured. Check $logfile"
 	cd ..
-	#rm -r --interactive=none .tmppureftpd
+	rm -r --interactive=none .tmppureftpd
         cleanup
         exit 1
     fi
