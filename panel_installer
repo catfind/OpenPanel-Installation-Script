@@ -1,0 +1,311 @@
+#!/bin/bash
+#Interactivley install OpenPanel, an OpenApp and/or PureFTPd
+
+#set and empty logfile
+logfile=panel_installer.log
+echo > $logfile
+
+#source file sources
+srcsources1="deb-src http://us.archive.ubuntu.com/ubuntu/ lucid main universe multiverse"
+srcsources2="deb-src http://us.archive.ubuntu.com/ubuntu/ lucid-security main universe multiverse"
+
+#OpenPanel sources
+sources1="deb http://download.openpanel.com/deb/ lucid main"
+sources2="deb-src http://download.openpanel.com/deb/ lucid main"
+
+#set select prompt
+PS3="Select a number: "
+
+#additional tools used during installation
+tools=()
+
+
+#cleanup function definition
+#purge all packages in $remove
+cleanup () {
+    echo "Cleaning up..."
+    for tool in $remove
+    do
+        echo "Purging ${tool}..."
+        echo >> $logfile
+        echo "==> apt-get purge $tool" &>> $logfile
+        if ! apt-get -y purge $tool >> $logfile
+        then
+            echo "An error has occured. Check $logfile"
+            exit 1
+        fi
+    done
+    echo "Remove unused dependencies? (runs \"apt-get autoremove\")"
+    read -p "Proceed? (y/N) "
+    if [[ ${REPLY,,} == y* ]]
+    then
+        echo "apt-get autoremove" >> $logfile
+        if ! apt-get -y autoremove &>> $logfile
+        then
+            echo "An error has occured. Check $logfile"
+            exit 1
+        fi
+    fi
+    echo "done"
+}
+
+#installed check function
+#use in if clause to check if packages is installed
+installed () {
+    if [ "$(dpkg -l $1 | sed -n 6p | dd bs=1 count=1 skip=1 2>/dev/null)" == "i" ]
+    then
+        return 0
+    else
+        return 1
+    fi
+}
+
+
+#test if root
+if [ "$(whoami)" != 'root' ] 
+then
+    echo "no root privileges"
+    exit 1;
+fi
+
+
+#initial selection
+echo "What would you like to install?"
+echo
+
+select option in "OpenPanel" "OpenApp" "PureFTPd only"
+do
+    echo "$option"
+    case $option in
+        "OpenPanel")
+            target="openpanel-suggested"
+            tools+=("gnupg" "build-essential")
+            ftp=true
+            break
+            ;;
+        "OpenApp")
+            tools+=("gnupg")
+            sources1+=" openapp"
+            sources2+=" openapp"
+            echo
+            echo "Which OpenApp would you like to install?"
+            echo
+            select appoption in "Tomcat" "Symfony" "Ruby on Rails" "MySQL" "Joomla" "Wordpress" "Drupal" "LAMP"
+            do
+                echo $appoption
+                case $appoption in
+                    "Tomcat")
+                        target="openapp-tomcat";;
+                    "Symfony")
+                        target="openapp-symfony";;
+                    "Ruby on Rails")
+                        target="openapp-ruby";;
+                    "MySQL")
+                        target="openapp-mysql";;
+                    "Joomla")
+                        target="openapp-joomla";;
+                    "Wordpress")
+                        target="openapp-wordpress";;
+                    "Drupal")
+                        target="openapp-drupal";;
+                    "LAMP")
+                        target="openapp-lamp";;
+                    *)
+                        echo "invalid selection";;
+                esac
+                break
+            done
+            break
+            ;;
+        "PureFTPd only")
+            target=""
+            tools+=("build-essential")
+            ftp=true
+            break
+            ;;
+        *)
+            echo "invalid selection"
+            ;;
+    esac
+done
+
+
+#Install additional tools
+c=0
+for tool in ${tools[@]}
+do
+    echo "Making sure $tool is installed..."
+    if ! installed $tool
+    then
+        echo "Installing..."
+        echo >> $logfile
+        echo "==> apt-get install $tool" >> $logfile
+        if ! apt-get -y install $tool &>> $logfile
+        then
+            echo "An error has occured. Check $logfile"
+            cleanup
+            exit 1
+        fi
+        remove[$c]=$tool
+        ((c++))
+    fi
+    echo "done"
+done
+
+
+#instal pureftpd if required
+if ${ftp:=false}
+then
+    #add source repos
+    echo "Installing PureFTPd..."
+    echo "The following lines will be added to your /etc/apt/sources.list:"
+    echo "  $srcsources1"
+    echo "  $srcsources2"
+    echo
+    read -p "Proceed? (y/N) "
+    if [[ ${REPLY,,} == y* ]]
+    then
+        echo "$srcsources1" >> /etc/apt/sources.list
+        echo "$srcsources2" >> /etc/apt/sources.list
+    else
+        read -p "Skip or abort? (s/A) "
+        if [[ ${REPLY,,} == s* ]]
+        then
+            echo "Assuming sources are available."
+        else
+            cleanup
+            exit 0
+        fi
+    fi
+    #update package sources
+    echo "Updating sources..."
+    echo >> $logfile
+    echo "==> apt-get update" >> $logfile
+    if ! apt-get update &>> $logfile
+    then
+        echo "An error has occured. Check $logfile"
+        cleanup
+        exit 1
+    fi
+    #tmp dir for sourcecode
+    mkdir .tmppureftpd
+    cd .tmppureftpd
+    #download
+    echo "Downloading sourcecode..."
+    echo >> ../$logfile
+    echo "==> apt-get source pure-ftpd" >> ../$logfile
+    if ! apt-get source pure-ftpd &>> ../$logfile
+    then
+        echo "An error has occured. Check $logfile"
+	cd ..
+	rm -r --interactive=none .tmppureftpd
+        cleanup
+        exit 1
+    fi
+    #make packages
+    cd pure-ftpd-1.0.24
+    echo "Editing rules file..."
+    sed 's/^optflags.*/& --without-capabilities/' -i debian/rules 
+    echo "Generating package..."
+    echo >> ../../$logfile
+    echo "==> dpkg-buildpackage -uc -b" >> ../../$logfile
+    if ! dpkg-buildpackage -uc -b &>> ../../$logfile
+    then
+        echo "An error has occured. Check $logfile"
+	cd ../..
+	rm -r --interactive=none .tmppureftpd
+        cleanup
+        exit 1
+    fi
+    cd ..
+    #install
+    echo "Installing..."
+    echo >> ../$logfile
+    echo "==> dpkg -i pure-ftpd-common_1.0.24-1_all.deb pure-ftpd_1.0.24-1_amd64.deb" >> ../$logfile
+    if ! dpkg -i pure-ftpd-common_1.0.24-1_all.deb pure-ftpd_1.0.24-1_amd64.deb &>> ../$logfile
+    then
+        echo "An error has occured. Check $logfile"
+	cd ..
+	#rm -r --interactive=none .tmppureftpd
+        cleanup
+        exit 1
+    fi
+    #pin
+    echo "Pinning..."
+    echo 'pure-ftpd-common hold' | dpkg --set-selections
+    echo 'pure-ftpd hold' | dpkg --set-selections
+    echo "done"
+    #remove tmp dir
+    cd ..
+    rm -r --interactive=none .tmppureftpd
+fi
+
+
+#install target
+if [ "$target" ]
+then
+    #add sources
+    echo "The following lines will be added to your /etc/apt/sources.list:"
+    echo "  $sources1"
+    echo "  $sources2"
+    echo
+    read -p "Proceed? (y/N) "
+    if [[ ${REPLY,,} == y* ]]
+    then
+        echo "$sources1" >> /etc/apt/sources.list
+        echo "$sources2" >> /etc/apt/sources.list
+        #add key
+        echo "Adding key..."
+        echo >> $logfile
+        echo "==> apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4EAC69B9" >> $logfile
+        echo "done"
+        if ! apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4EAC69B9 &>> $logfile
+        then
+            echo "An error has occured. Check $logfile"
+            cleanup
+            exit 1
+        fi
+    else
+        read -p "Skip or abort? (s/A) "
+        if [[ ${REPLY,,} == s* ]]
+        then
+            echo "Assuming sources are available."
+        else
+            cleanup
+            exit 0
+        fi
+    fi
+    #update package sources
+    echo "Updating sources..."
+    echo >> $logfile
+    echo "==> apt-get update" >> $logfile
+    if ! apt-get update &>> $logfile
+    then
+        echo "An error has occured. Check $logfile"
+        cleanup
+        exit 1
+    fi
+    echo "done"
+    #run actual installation
+    echo "Installing $target ..."
+    echo >> $logfile
+    #output to screen and logfile
+    (apt-get install $target 2>&1) | tee -a $logfile
+    if [ $PIPESTATUS != 0 ]
+    then
+        echo "An error has occured. Check $logfile"
+        cleanup
+        exit 1
+    fi
+    echo "done"
+    #for openapps set password
+    if [ "$option" == "OpenApp" ]
+    then
+        echo "Setting password..."
+        read -s -p "Password: "
+        openpanel-cli "update user password=$REPLY"
+    fi
+fi
+
+#clean up
+cleanup
