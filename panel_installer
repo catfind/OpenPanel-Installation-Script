@@ -130,7 +130,16 @@ do
 done
 
 
-#Install additional tools
+#install additional tools
+echo "Updating packet database..."
+echo >> $logfile
+echo "==> apt-get update" >> $logfile
+if ! apt-get update &>> $logfile
+then
+    echo "An error has occured. Check $logfile"
+    cleanup
+    exit 1
+fi
 c=0
 for tool in ${tools[@]}
 do
@@ -153,7 +162,7 @@ do
 done
 
 
-#instal pureftpd if required
+#install pureftpd if required
 if ${ftp:=false}
 then
     #add source repos
