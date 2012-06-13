@@ -31,6 +31,30 @@ The cleanup procedure will ask you whether to run 'apt-get autoremove' this will
 remove any unused dependencies from your system (not just the ones used during 
 the installation). On a clean system this should be absolutely safe.
 
+This is the last step in our installation script.
+
+
+
+## openpanel-admin password setup
+
+The OpenPanel installation guide says that OpenPanel may ask you to specify an openpanel-admin (the default admin user for OpenPanel) password.
+
+In our test runs, it did not, and you should run the following commands as root in your shell:
+
+'openpanel-cli'
+
+    [openpanel]% password user openpanel-admin
+
+    Enter new password:
+    Retype new password:
+
+
+    '(enter your new password twice)'
+
+    [openpanel]% exit
+
+
+
 ## OpenPanel Web interface
 
 You should now be able to access the OpenPanel web interface via port 4089 on 
