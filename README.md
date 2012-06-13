@@ -48,14 +48,17 @@ In our test runs, it did not, and you should run the following commands as root 
     Enter new password:
     Retype new password:
 
-
-    '(enter your new password twice)'
-
     [openpanel]% exit
 
+(enter your new password twice, followed by enter)
 
 
 ## OpenPanel Web interface
 
 You should now be able to access the OpenPanel web interface via port 4089 on 
 your machine’s IP or hostname.
+
+
+## Questions & Problems
+
+Feel free to fork this script, and improve upon it. We also may be able to help you with smaller problems.
