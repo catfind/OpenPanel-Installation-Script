@@ -199,8 +199,8 @@ then
     #install build dependencies
     echo "Installing build dependencies..."
     echo >> $logfile
-    echo "==> apt-get build-dep pure-ftpd" >> $logfile
-    if ! apt-get build-dep pure-ftpd &>> $logfile
+    echo "==> apt-get -y build-dep pure-ftpd" >> $logfile
+    if ! apt-get -y build-dep pure-ftpd &>> $logfile
     then
         echo "An error has occured. Check $logfile"
         cleanup
