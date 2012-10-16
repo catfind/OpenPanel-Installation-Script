@@ -226,6 +226,7 @@ then
     echo "Editing rules file..."
     sed 's/^optflags.*/& --without-capabilities/' -i debian/rules 
     echo "Generating package..."
+    echo "(This may take several minutes, please be patient.)"
     echo >> ../../$logfile
     echo "==> dpkg-buildpackage -uc -b" >> ../../$logfile
     if ! dpkg-buildpackage -uc -b &>> ../../$logfile
