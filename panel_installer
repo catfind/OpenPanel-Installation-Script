@@ -126,6 +126,7 @@ do
             ;;
         "patch OpenVZ init script")
             openvz_patch=true
+            break
             ;;
         *)
             echo "invalid selection"
