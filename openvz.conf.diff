@@ -1,0 +1,10 @@
+--- /etc/init/openvz.conf   2012-10-16 17:05:42.000000000 +0000
++++ /etc/init/openvz.conf   2012-10-16 17:01:15.000000000 +0000
+@@ -26,5 +26,7 @@
+ initctl emit filesystem --no-wait
+ initctl emit local-filesystems --no-wait
+ initctl emit virtual-filesystems --no-wait
++# the following line has been added by panel_installer
++initctl emit net-device-up --no-wait
+ init 2
+ end script
