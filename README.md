@@ -58,7 +58,16 @@ In our test runs, it did not, and you should run the following commands as root 
 You should now be able to access the OpenPanel web interface via port 4089 on 
 your machine’s IP or hostname.
 
+## A note about aptitude
 
-## Questions & Problems
+If you plan on using aptitude but it is not installed at the time the script is run, a small manual intervention is required. The script will tell you to issue the following two commands (once aptitude is installed of course):
+
+    aptitude hold pure-ftpd-common
+    aptitude hold pure-ftpd
+
+This will make sure aptitude doesn't upgrade (and break) pure-ftpd. If aptitude is preinstalled the script will do this automatically.
+
+
+# Questions & Problems
 
 Feel free to fork this script, and improve upon it. We also may be able to help you with smaller problems.

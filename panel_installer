@@ -257,6 +257,12 @@ then
     echo "Pinning..."
     echo 'pure-ftpd-common hold' | dpkg --set-selections
     echo 'pure-ftpd hold' | dpkg --set-selections
+    #special pinning for aptitude
+    if installed aptitude
+    then
+        aptitude hold pure-ftpd-common
+        aptitude hold pure-ftpd
+    fi
     echo "done"
     #remove tmp dir
     cd ..
@@ -330,5 +336,19 @@ then
     fi
 fi
 
+
 #clean up
 cleanup
+
+
+#tell user to pin the aptitude way if necessary
+if ${ftp:=false}
+then
+    if ! installed aptitude
+    then
+        echo
+        echo "If you plan on using aptitude you will have to pin pure-ftpd manually:"
+        echo "  aptitude hold pure-ftpd-common"
+        echo "  aptitude hold pure-ftpd"
+    fi
+fi
