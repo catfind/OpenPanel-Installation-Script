@@ -73,7 +73,7 @@ fi
 echo "What would you like to install?"
 echo
 
-select option in "OpenPanel" "OpenApp" "PureFTPd only"
+select option in "OpenPanel" "OpenApp" "PureFTPd only" "patch OpenVZ init script"
 do
     echo "$option"
     case $option in
@@ -81,6 +81,7 @@ do
             target="openpanel-suggested"
             tools+=("gnupg" "build-essential")
             ftp=true
+            openvz_patch=true
             break
             ;;
         "OpenApp")
@@ -123,11 +124,29 @@ do
             ftp=true
             break
             ;;
+        "patch OpenVZ init script")
+            openvz_patch=true
+            ;;
         *)
             echo "invalid selection"
             ;;
     esac
 done
+
+
+#openvz init script patching
+if $openvz_patch
+then
+    echo "Patching openvz init script..."
+    echo >> $logfile
+    echo "==> patch -p0 < openvz.conf.diff" &>> $logfile
+    if ! patch -p0 < openvz.conf.diff >> $logfile
+    then
+        echo "An error has occured. Check $logfile"
+        cleanup
+        exit 1
+    fi
+fi
 
 
 #install additional tools
