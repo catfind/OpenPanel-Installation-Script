@@ -60,6 +60,20 @@ installed () {
     fi
 }
 
+#openvz init script patching
+openvz_patch () {
+    echo "Patching openvz init script..."
+    echo >> $logfile
+    echo "==> patch -p0 < openvz.conf.diff" &>> $logfile
+    if ! patch -p0 < openvz.conf.diff >> $logfile
+    then
+        echo "An error has occured. Check $logfile"
+        echo "A common reason for this is that the patch has already been applied."
+        echo "Please check /etc/init/openvz.conf and be aware that you might have to start MySQL manually."
+        return 1
+    fi
+}
+
 
 #test if root
 if [ "$(whoami)" != 'root' ] 
@@ -81,7 +95,6 @@ do
             target="openpanel-suggested"
             tools+=("gnupg" "build-essential")
             ftp=true
-            openvz_patch=true
             break
             ;;
         "OpenApp")
@@ -125,7 +138,8 @@ do
             break
             ;;
         "patch OpenVZ init script")
-            openvz_patch=true
+            openvz_patch
+            exit 0
             break
             ;;
         *)
@@ -134,20 +148,6 @@ do
     esac
 done
 
-
-#openvz init script patching
-if $openvz_patch
-then
-    echo "Patching openvz init script..."
-    echo >> $logfile
-    echo "==> patch -p0 < openvz.conf.diff" &>> $logfile
-    if ! patch -p0 < openvz.conf.diff >> $logfile
-    then
-        echo "An error has occured. Check $logfile"
-        cleanup
-        exit 1
-    fi
-fi
 
 
 #install additional tools
@@ -293,6 +293,20 @@ fi
 #install target
 if [ "$target" ]
 then
+    #ask whether to patch
+    read -p "Apply patch to /etc/init/openvz? (enables automatic MySQL start) [y/N]"
+    if [[ ${REPLY,,} == y* ]]
+    then
+        if ! openvz_patch
+        then
+            read -p "This is not critical. Continue? [Y/n]"
+            if [[ ${REPLY,,} == n* ]]
+            then
+                cleanup
+                exit 1
+            fi
+        fi
+    fi
     #add sources
     echo "The following lines will be added to your /etc/apt/sources.list:"
     echo "  $sources1"
